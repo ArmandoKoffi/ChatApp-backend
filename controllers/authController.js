@@ -84,11 +84,11 @@ exports.register = async (req, res) => {
     }
 
     // Déterminer l'image de profil par défaut en fonction du genre depuis Cloudinary
-    let defaultProfilePicture = 'default-avatars/default-other.png';
+    let defaultProfilePicture = 'https://res.cloudinary.com/dx9ihjr0f/image/upload/v1746492001/default-avatars/default-other.png';
     if (gender === 'male') {
-      defaultProfilePicture = 'default-avatars/default-male.png';
+      defaultProfilePicture = 'https://res.cloudinary.com/dx9ihjr0f/image/upload/v1746491998/default-avatars/default-male.png';
     } else if (gender === 'female') {
-      defaultProfilePicture = 'default-avatars/default-female.png';
+      defaultProfilePicture = 'https://res.cloudinary.com/dx9ihjr0f/image/upload/v1746492000/default-avatars/default-female.png';
     }
 
     // Créer un nouvel utilisateur
