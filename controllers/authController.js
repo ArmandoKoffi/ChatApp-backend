@@ -57,7 +57,20 @@ const sendTokenResponse = (user, statusCode, res) => {
 // @access  Public
 exports.register = async (req, res) => {
   try {
-    const { username, email, password, gender, age, interests, intentions, location } = req.body;
+    const { username, email, password, gender, age, interests: rawInterests, intentions, location } = req.body;
+    let interests = rawInterests;
+    // Parse interests if it arrives as a string (from FormData JSON.stringify)
+    if (typeof rawInterests === 'string') {
+      try {
+        interests = JSON.parse(rawInterests);
+      } catch (parseError) {
+        console.error('Erreur lors du parsing de interests:', parseError);
+        return res.status(400).json({
+          success: false,
+          message: 'Format invalide pour les centres d\'intérêt'
+        });
+      }
+    }
 
     // Vérifier si l'utilisateur existe déjà
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
