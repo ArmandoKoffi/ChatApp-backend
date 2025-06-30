@@ -18,7 +18,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "https://chat-app-henna-nine-33.vercel.app", // URL du frontend
+    origin: "https://chat-app-chi-black.vercel.app/", // URL du frontend
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -27,7 +27,7 @@ const io = socketIo(server, {
 // Middleware
 app.use(
   cors({
-    origin: "https://chat-app-henna-nine-33.vercel.app", // URL du frontend
+    origin: "https://chat-app-chi-black.vercel.app/", // URL du frontend
     credentials: true, // Autoriser les cookies
   })
 );
