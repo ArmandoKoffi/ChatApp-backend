@@ -765,7 +765,7 @@ exports.uploadMediaMessage = async (req, res) => {
           content: mediaType.charAt(0).toUpperCase() + mediaType.slice(1) + ' envoyé',
           messageId: message._id,
           media: {
-            url: `http://localhost:5000/uploads/messages/${permanentFilename}`,
+            url: `https://chatapp-shi2.onrender.com/uploads/messages/${permanentFilename}`,
             type: mediaType
           },
           timestamp: message.createdAt.toISOString()
@@ -779,7 +779,7 @@ exports.uploadMediaMessage = async (req, res) => {
       success: true,
       message: {
         id: message._id,
-        fileUrl: `http://localhost:5000/uploads/messages/${permanentFilename}`
+        fileUrl: `https://chatapp-shi2.onrender.com/uploads/messages/${permanentFilename}`
       }
     });
   } catch (error) {
