@@ -182,7 +182,7 @@ exports.getProfile = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération du profil',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'production' ? error.message : undefined
     });
   }
 };
@@ -319,7 +319,7 @@ exports.updateProfile = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la mise à jour du profil',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'production' ? error.message : undefined
     });
   }
 };
@@ -364,7 +364,7 @@ exports.changePassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors du changement de mot de passe',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'production' ? error.message : undefined
     });
   }
 };
@@ -397,7 +397,7 @@ exports.getAllUsers = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération des utilisateurs',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'production' ? error.message : undefined
     });
   }
 };
@@ -450,7 +450,7 @@ exports.searchUsers = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la recherche d\'utilisateurs',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'production' ? error.message : undefined
     });
   }
 };
@@ -522,7 +522,7 @@ exports.getUserById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération de l\'utilisateur',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'production' ? error.message : undefined
     });
   }
 };

@@ -60,7 +60,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "development",
+      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 1 jour
     },
@@ -295,7 +295,7 @@ mongoose
     const PORT = process.env.PORT || 5000;
     server.listen(PORT, () => {
       console.log(`🚀 Serveur démarré sur le port ${PORT}`);
-      console.log(`🌍 Environnement: ${process.env.NODE_ENV || "development"}`);
+      console.log(`🌍 Environnement: ${process.env.NODE_ENV || "production"}`);
       console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL}`);
       console.log(`☁️  Cloudinary Cloud: ${process.env.CLOUDINARY_CLOUD_NAME}`);
 

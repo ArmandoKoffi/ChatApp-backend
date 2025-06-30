@@ -116,7 +116,7 @@ exports.register = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de l\'inscription',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'production' ? error.message : undefined
     });
   }
 };
@@ -158,7 +158,7 @@ exports.login = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la connexion',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'production' ? error.message : undefined
     });
   }
 };
@@ -206,7 +206,7 @@ exports.logout = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la déconnexion',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'production' ? error.message : undefined
     });
   }
 };
@@ -254,7 +254,7 @@ exports.getMe = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération du profil',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'production' ? error.message : undefined
     });
   }
 };
@@ -298,7 +298,7 @@ exports.forgotPassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la réinitialisation du mot de passe',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'production' ? error.message : undefined
     });
   }
 };
