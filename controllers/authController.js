@@ -83,12 +83,12 @@ exports.register = async (req, res) => {
       });
     }
 
-    // Déterminer l'image de profil par défaut en fonction du genre
-    let defaultProfilePicture = 'default-other.png';
+    // Déterminer l'image de profil par défaut en fonction du genre depuis Cloudinary
+    let defaultProfilePicture = 'default-avatars/default-other.png';
     if (gender === 'male') {
-      defaultProfilePicture = 'default-male.png';
+      defaultProfilePicture = 'default-avatars/default-male.png';
     } else if (gender === 'female') {
-      defaultProfilePicture = 'default-female.png';
+      defaultProfilePicture = 'default-avatars/default-female.png';
     }
 
     // Créer un nouvel utilisateur
@@ -122,8 +122,11 @@ exports.register = async (req, res) => {
       }
     }
 
-    // Envoyer le token
-    sendTokenResponse(user, 201, res);
+    // Ne pas envoyer de token, juste une réponse de succès pour rediriger vers la connexion
+    res.status(201).json({
+      success: true,
+      message: 'Inscription réussie. Veuillez vous connecter pour accéder à l\'application.'
+    });
   } catch (error) {
     console.error('Erreur lors de l\'inscription:', error);
     res.status(500).json({
