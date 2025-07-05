@@ -817,17 +817,29 @@ exports.getBlockedUsers = async (req, res) => {
 // @access  Private
 exports.getOnlineUsers = async (req, res) => {
   try {
-    const onlineUsers = Array.from(socketUtils.getOnlineUsers().keys());
-    
+    const onlineUsersMap = socketUtils.getOnlineUsers();
+    const onlineUserIds = Array.from(onlineUsersMap.keys()).filter(id => id !== req.user._id);
+
+    if (onlineUserIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: []
+      });
+    }
+
     const users = await User.find({ 
-      _id: { $in: onlineUsers },
-      _id: { $ne: req.user._id }
-    }).select('_id username profilePicture isOnline profilePictureSecure');
-    
+      _id: { $in: onlineUserIds }
+    }).select('_id username profilePicture isOnline profilePictureSecure lastActive');
+
     const usersWithDecryptedImages = users.map(user => {
       const userObj = user.toObject();
       if (userObj.profilePictureSecure && userObj.profilePicture) {
-        userObj.profilePicture = getDecryptedUrl(userObj.profilePicture, userObj.profilePictureSecure);
+        try {
+          userObj.profilePicture = getDecryptedUrl(userObj.profilePicture, userObj.profilePictureSecure);
+        } catch (error) {
+          console.error('Error decrypting profile picture:', error);
+          userObj.profilePicture = '';
+        }
       }
       return userObj;
     });
@@ -837,10 +849,11 @@ exports.getOnlineUsers = async (req, res) => {
       data: usersWithDecryptedImages
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération des utilisateurs en ligne:', error);
+    console.error('Error fetching online users:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de la récupération des utilisateurs en ligne'
+      message: 'Error fetching online users',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
