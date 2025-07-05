@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
+const MongoStore = require("connect-mongo");
 const http = require("http");
 const socketIo = require("socket.io");
 require("dotenv").config();
@@ -13,6 +14,7 @@ const userRoutes = require("./routes/userRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const chatRoomRoutes = require("./routes/chatRoomRoutes");
 const mediaRoutes = require("./routes/mediaRoutes");
+const sidebarRoutes = require("./routes/sidebarRoutes");
 
 const app = express();
 const server = http.createServer(app);
@@ -59,6 +61,10 @@ app.use(
     secret: process.env.JWT_SECRET,
     resave: false,
     saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGODB_URI,
+      collectionName: 'sessions'
+    }),
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
@@ -73,6 +79,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/chatrooms", chatRoomRoutes);
 app.use("/api/media", mediaRoutes);
+app.use("/api/sidebar", sidebarRoutes);
 
 // Route de base
 app.get("/", (req, res) => {
@@ -284,8 +291,6 @@ io.on("connection", (socket) => {
 // Connexion à MongoDB
 mongoose
   .connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
     serverSelectionTimeoutMS: 5000,
   })
   .then(() => {
