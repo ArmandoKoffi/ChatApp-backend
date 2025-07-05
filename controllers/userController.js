@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { uploadToCloudinary, removeFromCloudinary, getDecryptedUrl } = require('../utils/cloudinary');
 const { cleanupTempFile } = require('../middleware/upload');
+const socketUtils = require('../utils/socket');
 
 // @desc    Inscription d'un nouvel utilisateur
 // @route   POST /api/users/register
@@ -309,6 +310,13 @@ exports.updateProfile = async (req, res) => {
         updatedUser.profilePicture = updatedUser.profilePicture || '';
       }
     }
+
+    // Émettre l'événement de mise à jour
+    socketUtils.emitProfileUpdate(userId, {
+      profilePicture: updatedUser.profilePicture,
+      username: updatedUser.username,
+      isOnline: updatedUser.isOnline
+    });
 
     res.status(200).json({
       success: true,
@@ -800,6 +808,39 @@ exports.getBlockedUsers = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération des utilisateurs bloqués'
+    });
+  }
+};
+
+// @desc    Obtenir la liste des utilisateurs en ligne
+// @route   GET /api/users/online
+// @access  Private
+exports.getOnlineUsers = async (req, res) => {
+  try {
+    const onlineUsers = Array.from(socketUtils.getOnlineUsers().keys());
+    
+    const users = await User.find({ 
+      _id: { $in: onlineUsers },
+      _id: { $ne: req.user._id }
+    }).select('_id username profilePicture isOnline profilePictureSecure');
+    
+    const usersWithDecryptedImages = users.map(user => {
+      const userObj = user.toObject();
+      if (userObj.profilePictureSecure && userObj.profilePicture) {
+        userObj.profilePicture = getDecryptedUrl(userObj.profilePicture, userObj.profilePictureSecure);
+      }
+      return userObj;
+    });
+
+    res.status(200).json({
+      success: true,
+      data: usersWithDecryptedImages
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des utilisateurs en ligne:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des utilisateurs en ligne'
     });
   }
 };

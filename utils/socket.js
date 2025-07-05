@@ -16,3 +16,12 @@ exports.getIo = () => {
 const onlineUsers = new Map();
 
 exports.getOnlineUsers = () => onlineUsers;
+
+exports.emitProfileUpdate = (userId, profileData) => {
+  if (io) {
+    io.emit('profileUpdate', {
+      userId,
+      ...profileData
+    });
+  }
+};

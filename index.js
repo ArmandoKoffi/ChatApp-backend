@@ -113,11 +113,25 @@ const onlineUsers = socketUtils.getOnlineUsers();
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  // Handle user joining
   socket.on("join", (userId) => {
     onlineUsers.set(userId, socket.id);
     io.emit("onlineUsers", Array.from(onlineUsers.keys()));
     console.log("User joined:", userId);
+  });
+
+  socket.on("profileUpdate", (data) => {
+    io.emit("profileUpdate", data);
+  });
+
+  socket.on("disconnect", () => {
+    for (const [userId, socketId] of onlineUsers.entries()) {
+      if (socketId === socket.id) {
+        onlineUsers.delete(userId);
+        io.emit("onlineUsers", Array.from(onlineUsers.keys()));
+        console.log("User disconnected:", userId);
+        break;
+      }
+    }
   });
 
   // Handle private message
@@ -271,18 +285,6 @@ io.on("connection", (socket) => {
     onlineUsers.delete(userId);
     io.emit("onlineUsers", Array.from(onlineUsers.keys()));
     console.log("User logged out:", userId);
-  });
-
-  // Handle user disconnection
-  socket.on("disconnect", () => {
-    for (const [userId, socketId] of onlineUsers.entries()) {
-      if (socketId === socket.id) {
-        onlineUsers.delete(userId);
-        io.emit("onlineUsers", Array.from(onlineUsers.keys()));
-        console.log("User disconnected:", userId);
-        break;
-      }
-    }
   });
 });
 

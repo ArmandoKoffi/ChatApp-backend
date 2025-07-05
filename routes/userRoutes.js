@@ -23,6 +23,7 @@ router.put('/change-password', protect, changePasswordRules, validate, changePas
 // Routes des utilisateurs
 router.get('/', protect, getAllUsers);
 router.get('/:id', protect, getProfile);
+router.get('/online', protect, getOnlineUsers);
 
 // Routes des contacts
 router.post('/contacts/:id', protect, addContact);
