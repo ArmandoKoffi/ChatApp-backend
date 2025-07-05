@@ -10,7 +10,8 @@ const {
   getContacts,
   blockUser,
   unblockUser,
-  getBlockedUsers
+  getBlockedUsers,
+  getOnlineUsers
 } = require('../controllers/userController');
 const { protect } = require('../middleware/auth');
 const { updateProfileRules, changePasswordRules, validate } = require('../middleware/validator');
