@@ -14,7 +14,6 @@ const userRoutes = require("./routes/userRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const chatRoomRoutes = require("./routes/chatRoomRoutes");
 const mediaRoutes = require("./routes/mediaRoutes");
-const sidebarRoutes = require("./routes/sidebarRoutes");
 
 const app = express();
 const server = http.createServer(app);
@@ -79,7 +78,6 @@ app.use("/api/users", userRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/chatrooms", chatRoomRoutes);
 app.use("/api/media", mediaRoutes);
-app.use("/api/sidebar", sidebarRoutes);
 
 // Route de base
 app.get("/", (req, res) => {
