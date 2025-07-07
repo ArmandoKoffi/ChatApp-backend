@@ -10,7 +10,8 @@ const {
   getContacts,
   blockUser,
   unblockUser,
-  getBlockedUsers
+  getBlockedUsers,
+  getOnlineUsers
 } = require('../controllers/userController');
 const { protect } = require('../middleware/auth');
 const { updateProfileRules, changePasswordRules, validate } = require('../middleware/validator');
@@ -22,6 +23,7 @@ router.put('/change-password', protect, changePasswordRules, validate, changePas
 
 // Routes des utilisateurs
 router.get('/', protect, getAllUsers);
+router.get('/online', protect, getOnlineUsers);
 router.get('/:id', protect, getProfile);
 
 // Routes des contacts

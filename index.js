@@ -114,10 +114,32 @@ io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
   // Handle user joining
-  socket.on("join", (userId) => {
-    onlineUsers.set(userId, socket.id);
-    io.emit("onlineUsers", Array.from(onlineUsers.keys()));
-    console.log("User joined:", userId);
+  socket.on("join", async (userId) => {
+    try {
+      // Récupérer les informations de l'utilisateur depuis la base de données
+      const User = require('./models/User');
+      const user = await User.findById(userId).select('username profilePicture isOnline profilePictureSecure');
+      
+      if (user) {
+        // Mettre à jour le statut en ligne dans la base de données
+        user.isOnline = true;
+        user.lastActive = new Date();
+        await user.save({ validateBeforeSave: false });
+        
+        // Ajouter l'utilisateur à la liste des utilisateurs en ligne
+        socketUtils.addOnlineUser(userId, socket.id, {
+          username: user.username,
+          profilePicture: user.profilePicture,
+          isOnline: true
+        });
+        
+        // Émettre la liste mise à jour des utilisateurs en ligne
+        io.emit("onlineUsers", socketUtils.getOnlineUserIds());
+        console.log("User joined:", userId, user.username);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la connexion de l\'utilisateur:', error);
+    }
   });
 
   // Handle private message
@@ -267,21 +289,51 @@ io.on("connection", (socket) => {
   });
 
   // Handle user logout
-  socket.on("logout", (userId) => {
-    onlineUsers.delete(userId);
-    io.emit("onlineUsers", Array.from(onlineUsers.keys()));
-    console.log("User logged out:", userId);
+  socket.on("logout", async (userId) => {
+    try {
+      // Mettre à jour le statut hors ligne dans la base de données
+      const User = require('./models/User');
+      const user = await User.findById(userId);
+      if (user) {
+        user.isOnline = false;
+        user.lastActive = new Date();
+        await user.save({ validateBeforeSave: false });
+      }
+      
+      // Supprimer l'utilisateur de la liste des utilisateurs en ligne
+      socketUtils.removeOnlineUser(userId);
+      io.emit("onlineUsers", socketUtils.getOnlineUserIds());
+      console.log("User logged out:", userId);
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion de l\'utilisateur:', error);
+    }
   });
 
   // Handle user disconnection
-  socket.on("disconnect", () => {
-    for (const [userId, socketId] of onlineUsers.entries()) {
-      if (socketId === socket.id) {
-        onlineUsers.delete(userId);
-        io.emit("onlineUsers", Array.from(onlineUsers.keys()));
-        console.log("User disconnected:", userId);
-        break;
+  socket.on("disconnect", async () => {
+    try {
+      // Trouver l'utilisateur correspondant à cette socket
+      const onlineUsers = socketUtils.getOnlineUsers();
+      for (const [userId, userInfo] of onlineUsers.entries()) {
+        if (userInfo.socketId === socket.id) {
+          // Mettre à jour le statut hors ligne dans la base de données
+          const User = require('./models/User');
+          const user = await User.findById(userId);
+          if (user) {
+            user.isOnline = false;
+            user.lastActive = new Date();
+            await user.save({ validateBeforeSave: false });
+          }
+          
+          // Supprimer l'utilisateur de la liste des utilisateurs en ligne
+          socketUtils.removeOnlineUser(userId);
+          io.emit("onlineUsers", socketUtils.getOnlineUserIds());
+          console.log("User disconnected:", userId);
+          break;
+        }
       }
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion de l\'utilisateur:', error);
     }
   });
 });

@@ -310,6 +310,20 @@ exports.updateProfile = async (req, res) => {
       }
     }
 
+    // Émettre un événement Socket.IO pour notifier les autres utilisateurs de la mise à jour du profil
+    try {
+      const socketUtils = require('../utils/socket');
+      const io = socketUtils.getIo();
+      io.emit('profileUpdate', {
+        userId: updatedUser._id,
+        username: updatedUser.username,
+        profilePicture: updatedUser.profilePicture,
+        isOnline: updatedUser.isOnline
+      });
+    } catch (socketError) {
+      console.error('Erreur lors de l\'émission de l\'événement profileUpdate:', socketError);
+    }
+
     res.status(200).json({
       success: true,
       data: updatedUser
@@ -800,6 +814,43 @@ exports.getBlockedUsers = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération des utilisateurs bloqués'
+    });
+  }
+};
+
+// @desc    Obtenir les utilisateurs en ligne
+// @route   GET /api/users/online
+// @access  Private
+exports.getOnlineUsers = async (req, res) => {
+  try {
+    const socketUtils = require('../utils/socket');
+    const onlineUserIds = socketUtils.getOnlineUserIds();
+    
+    // Récupérer les informations des utilisateurs en ligne depuis la base de données
+    const onlineUsers = await User.find({
+      _id: { $in: onlineUserIds, $ne: req.user._id }
+    }).select('_id username profilePicture isOnline lastActive profilePictureSecure');
+    
+    // Déchiffrer les URLs des images de profil si nécessaire
+    const usersWithDecryptedImages = onlineUsers.map(user => {
+      const userObj = user.toObject();
+      if (userObj.profilePictureSecure && userObj.profilePicture) {
+        userObj.profilePicture = getDecryptedUrl(userObj.profilePicture, userObj.profilePictureSecure);
+      }
+      return userObj;
+    });
+    
+    res.status(200).json({
+      success: true,
+      count: usersWithDecryptedImages.length,
+      data: usersWithDecryptedImages
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des utilisateurs en ligne:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des utilisateurs en ligne',
+      error: process.env.NODE_ENV === 'production' ? error.message : undefined
     });
   }
 };
