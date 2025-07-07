@@ -21,8 +21,8 @@ const io = socketIo(server, {
   cors: {
     origin: "https://chat-app-chi-black.vercel.app", // URL du frontend
     methods: ["GET", "POST"],
-    credentials: true
-  }
+    credentials: true,
+  },
 });
 
 // Middleware
@@ -62,7 +62,7 @@ app.use(
     saveUninitialized: false,
     store: MongoStore.create({
       mongoUrl: process.env.MONGODB_URI,
-      collectionName: 'sessions'
+      collectionName: "sessions",
     }),
     cookie: {
       secure: process.env.NODE_ENV === "production",
@@ -102,7 +102,7 @@ app.use((req, res) => {
   });
 });
 
-const socketUtils = require('./utils/socket');
+const socketUtils = require("./utils/socket");
 
 // Set Socket.IO instance
 socketUtils.setIo(io);
@@ -117,28 +117,30 @@ io.on("connection", (socket) => {
   socket.on("join", async (userId) => {
     try {
       // Récupérer les informations de l'utilisateur depuis la base de données
-      const User = require('./models/User');
-      const user = await User.findById(userId).select('username profilePicture isOnline profilePictureSecure');
-      
+      const User = require("./models/User");
+      const user = await User.findById(userId).select(
+        "username profilePicture isOnline profilePictureSecure"
+      );
+
       if (user) {
         // Mettre à jour le statut en ligne dans la base de données
         user.isOnline = true;
         user.lastActive = new Date();
         await user.save({ validateBeforeSave: false });
-        
+
         // Ajouter l'utilisateur à la liste des utilisateurs en ligne
         socketUtils.addOnlineUser(userId, socket.id, {
           username: user.username,
           profilePicture: user.profilePicture,
-          isOnline: true
+          isOnline: true,
         });
-        
+
         // Émettre la liste mise à jour des utilisateurs en ligne
         io.emit("onlineUsers", socketUtils.getOnlineUserIds());
         console.log("User joined:", userId, user.username);
       }
     } catch (error) {
-      console.error('Erreur lors de la connexion de l\'utilisateur:', error);
+      console.error("Erreur lors de la connexion de l'utilisateur:", error);
     }
   });
 
@@ -147,16 +149,20 @@ io.on("connection", (socket) => {
     const { senderId, receiverId, content, messageId, media, timestamp } = data;
     const receiverSocketId = onlineUsers.get(receiverId);
     const messageTimestamp = timestamp || new Date().toISOString();
-    console.log(`Private message from ${senderId} to ${receiverId}: ${content}`);
+    console.log(
+      `Private message from ${senderId} to ${receiverId}: ${content}`
+    );
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("privateMessage", {
         senderId,
         content,
         messageId,
         media,
-        timestamp: messageTimestamp
+        timestamp: messageTimestamp,
       });
-      console.log(`Message sent to ${receiverId} at socket ${receiverSocketId}`);
+      console.log(
+        `Message sent to ${receiverId} at socket ${receiverSocketId}`
+      );
     } else {
       console.log(`Receiver ${receiverId} not found or not online`);
     }
@@ -166,7 +172,7 @@ io.on("connection", (socket) => {
       content,
       messageId,
       media,
-      timestamp: messageTimestamp
+      timestamp: messageTimestamp,
     });
   });
 
@@ -177,9 +183,13 @@ io.on("connection", (socket) => {
     console.log(`Typing event from ${senderId} to ${receiverId}: ${isTyping}`);
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("typing", { senderId, isTyping });
-      console.log(`Typing event sent to ${receiverId} at socket ${receiverSocketId}`);
+      console.log(
+        `Typing event sent to ${receiverId} at socket ${receiverSocketId}`
+      );
     } else {
-      console.log(`Receiver ${receiverId} not found or not online for typing event`);
+      console.log(
+        `Receiver ${receiverId} not found or not online for typing event`
+      );
     }
   });
 
@@ -191,13 +201,15 @@ io.on("connection", (socket) => {
       io.to(receiverSocketId).emit("call:incoming", {
         callerId,
         callType,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      console.log(`Call initiated from ${callerId} to ${receiverId} (${callType})`);
+      console.log(
+        `Call initiated from ${callerId} to ${receiverId} (${callType})`
+      );
     } else {
       io.to(socket.id).emit("call:unavailable", {
         receiverId,
-        message: "User is not online"
+        message: "User is not online",
       });
     }
   });
@@ -209,9 +221,11 @@ io.on("connection", (socket) => {
       io.to(callerSocketId).emit("call:accepted", {
         receiverId,
         callType,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      console.log(`Call accepted by ${receiverId} from ${callerId} (${callType})`);
+      console.log(
+        `Call accepted by ${receiverId} from ${callerId} (${callType})`
+      );
     }
   });
 
@@ -221,7 +235,7 @@ io.on("connection", (socket) => {
     if (callerSocketId) {
       io.to(callerSocketId).emit("call:rejected", {
         receiverId,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
       console.log(`Call rejected by ${receiverId} from ${callerId}`);
     }
@@ -233,7 +247,7 @@ io.on("connection", (socket) => {
     if (peerSocketId) {
       io.to(peerSocketId).emit("call:ended", {
         userId,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
       console.log(`Call ended by ${userId} with ${peerId}`);
     }
@@ -246,7 +260,7 @@ io.on("connection", (socket) => {
       io.to(peerSocketId).emit("call:toggled", {
         userId,
         callType,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
       console.log(`Call toggled by ${userId} to ${callType} with ${peerId}`);
     }
@@ -259,7 +273,7 @@ io.on("connection", (socket) => {
       io.to(receiverSocketId).emit("webrtc:offer", {
         senderId,
         offer,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
   });
@@ -271,7 +285,7 @@ io.on("connection", (socket) => {
       io.to(receiverSocketId).emit("webrtc:answer", {
         senderId,
         answer,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
   });
@@ -283,7 +297,7 @@ io.on("connection", (socket) => {
       io.to(receiverSocketId).emit("webrtc:ice-candidate", {
         senderId,
         candidate,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
   });
@@ -292,20 +306,20 @@ io.on("connection", (socket) => {
   socket.on("logout", async (userId) => {
     try {
       // Mettre à jour le statut hors ligne dans la base de données
-      const User = require('./models/User');
+      const User = require("./models/User");
       const user = await User.findById(userId);
       if (user) {
         user.isOnline = false;
         user.lastActive = new Date();
         await user.save({ validateBeforeSave: false });
       }
-      
+
       // Supprimer l'utilisateur de la liste des utilisateurs en ligne
       socketUtils.removeOnlineUser(userId);
       io.emit("onlineUsers", socketUtils.getOnlineUserIds());
       console.log("User logged out:", userId);
     } catch (error) {
-      console.error('Erreur lors de la déconnexion de l\'utilisateur:', error);
+      console.error("Erreur lors de la déconnexion de l'utilisateur:", error);
     }
   });
 
@@ -317,14 +331,14 @@ io.on("connection", (socket) => {
       for (const [userId, userInfo] of onlineUsers.entries()) {
         if (userInfo.socketId === socket.id) {
           // Mettre à jour le statut hors ligne dans la base de données
-          const User = require('./models/User');
+          const User = require("./models/User");
           const user = await User.findById(userId);
           if (user) {
             user.isOnline = false;
             user.lastActive = new Date();
             await user.save({ validateBeforeSave: false });
           }
-          
+
           // Supprimer l'utilisateur de la liste des utilisateurs en ligne
           socketUtils.removeOnlineUser(userId);
           io.emit("onlineUsers", socketUtils.getOnlineUserIds());
@@ -333,7 +347,7 @@ io.on("connection", (socket) => {
         }
       }
     } catch (error) {
-      console.error('Erreur lors de la déconnexion de l\'utilisateur:', error);
+      console.error("Erreur lors de la déconnexion de l'utilisateur:", error);
     }
   });
 });

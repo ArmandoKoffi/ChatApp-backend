@@ -7,7 +7,7 @@ exports.setIo = (socketIoInstance) => {
 
 exports.getIo = () => {
   if (!io) {
-    throw new Error('Socket.IO instance not initialized');
+    throw new Error("Socket.IO instance not initialized");
   }
   return io;
 };
@@ -22,7 +22,7 @@ exports.addOnlineUser = (userId, socketId, userInfo = {}) => {
   onlineUsers.set(userId, {
     socketId,
     ...userInfo,
-    lastSeen: new Date()
+    lastSeen: new Date(),
   });
 };
 
@@ -38,7 +38,7 @@ exports.updateOnlineUser = (userId, userInfo) => {
     onlineUsers.set(userId, {
       ...existingUser,
       ...userInfo,
-      lastSeen: new Date()
+      lastSeen: new Date(),
     });
   }
 };
