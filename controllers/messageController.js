@@ -538,6 +538,24 @@ exports.markAsRead = async (req, res) => {
     // Marquer le message comme lu
     await message.markAsRead(userId);
 
+    // Émettre l'événement Socket.IO pour notifier les autres clients
+    try {
+      const socketUtils = require("../utils/socket");
+      const io = socketUtils.getIo();
+      const onlineUsers = socketUtils.getOnlineUsers();
+      const senderSocketId = onlineUsers.get(message.sender.toString());
+      
+      if (senderSocketId) {
+        io.to(senderSocketId).emit("messageRead", {
+          conversationId: message.receiver.toString(),
+          userId: message.receiver.toString(),
+          messageId: messageId
+        });
+      }
+    } catch (socketError) {
+      console.error("Erreur lors de l'émission de l'événement messageRead:", socketError);
+    }
+
     res.status(200).json({
       success: true,
       message: "Message marqué comme lu",
@@ -547,6 +565,54 @@ exports.markAsRead = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Erreur lors du marquage du message comme lu",
+    });
+  }
+};
+
+// @desc    Marquer les messages d'une conversation comme lus
+// @route   POST /api/messages/mark-read
+// @access  Private
+exports.markConversationAsRead = async (req, res) => {
+  try {
+    const { conversationId, userId: targetUserId } = req.body;
+    const currentUserId = req.user._id;
+
+    // Marquer tous les messages non lus de cette conversation comme lus
+    await Message.updateMany(
+      {
+        sender: targetUserId || conversationId,
+        receiver: currentUserId,
+        isRead: false,
+      },
+      { isRead: true }
+    );
+
+    // Émettre l'événement Socket.IO pour notifier les autres clients
+    try {
+      const socketUtils = require("../utils/socket");
+      const io = socketUtils.getIo();
+      const onlineUsers = socketUtils.getOnlineUsers();
+      const senderSocketId = onlineUsers.get((targetUserId || conversationId).toString());
+      
+      if (senderSocketId) {
+        io.to(senderSocketId).emit("messageRead", {
+          conversationId: currentUserId.toString(),
+          userId: currentUserId.toString()
+        });
+      }
+    } catch (socketError) {
+      console.error("Erreur lors de l'émission de l'événement messageRead:", socketError);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Messages marqués comme lus",
+    });
+  } catch (error) {
+    console.error("Erreur lors du marquage des messages comme lus:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erreur lors du marquage des messages comme lus",
     });
   }
 };

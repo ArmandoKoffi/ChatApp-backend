@@ -10,6 +10,7 @@ const {
   deleteMessage,
   addReaction,
   markAsRead,
+  markConversationAsRead,
   markAsPlayed,
   getLastMessages,
   getSharedData
@@ -31,6 +32,7 @@ router.get('/room/:roomId', protect, getRoomMessages);
 router.delete('/:id', protect, deleteMessage);
 router.post('/:id/reaction', protect, addReaction);
 router.put('/:id/read', protect, markAsRead);
+router.post('/mark-read', protect, markConversationAsRead);
 router.put('/:id/play', protect, markAsPlayed);
 
 // Route pour récupérer les derniers messages de toutes les conversations
