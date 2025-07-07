@@ -77,21 +77,7 @@ exports.sendPrivateMessage = async (req, res) => {
       const receiverSocketId = onlineUsers.get(receiverId);
       const senderSocketId = onlineUsers.get(senderId.toString());
 
-      // Émettre le message privé au destinataire
-      if (receiverSocketId) {
-        io.to(receiverSocketId).emit("privateMessage", {
-          senderId,
-          content: content || "",
-          messageId: message._id,
-          media: req.file
-            ? {
-                url: `/uploads/messages/${req.file.filename}`,
-                type: req.file.mimetype.split("/")[0],
-              }
-            : null,
-          timestamp: message.createdAt.toISOString(),
-        });
-      }
+      // Les événements Socket.IO sont maintenant émis dans la section de mise à jour de la liste ci-dessous
 
       // Émettre la mise à jour de la liste de messages pour les deux utilisateurs
       const messageListData = {
@@ -103,17 +89,44 @@ exports.sendPrivateMessage = async (req, res) => {
         isUnread: true,
       };
 
-      // Pour le destinataire
+      // Pour le destinataire - il reçoit un message de l'expéditeur
       if (receiverSocketId) {
         io.to(receiverSocketId).emit("messageListUpdate", messageListData);
+        // Émettre aussi l'événement privateMessage pour mise à jour en temps réel
+        io.to(receiverSocketId).emit("privateMessage", {
+          senderId: senderId.toString(),
+          content: content || "",
+          messageId: message._id,
+          timestamp: message.createdAt.toISOString(),
+          media: req.file
+            ? {
+                url: `/uploads/messages/${req.file.filename}`,
+                type: req.file.mimetype.split("/")[0],
+              }
+            : null,
+        });
       }
 
-      // Pour l'expéditeur (marquer comme lu)
+      // Pour l'expéditeur - il voit sa conversation avec le destinataire mise à jour
       if (senderSocketId) {
         io.to(senderSocketId).emit("messageListUpdate", {
-          ...messageListData,
-          senderId: receiverId.toString(),
-          isUnread: false,
+          senderId: receiverId.toString(), // L'ID de la conversation (destinataire)
+          lastMessage: content || (req.file ? `${req.file.mimetype.split("/")[0]} envoyé` : ""),
+          timestamp: message.createdAt.toISOString(),
+          isUnread: false, // L'expéditeur a déjà "lu" son propre message
+        });
+        // Émettre aussi l'événement privateMessageSent
+        io.to(senderSocketId).emit("privateMessageSent", {
+          receiverId: receiverId.toString(),
+          content: content || "",
+          messageId: message._id,
+          timestamp: message.createdAt.toISOString(),
+          media: req.file
+            ? {
+                url: `/uploads/messages/${req.file.filename}`,
+                type: req.file.mimetype.split("/")[0],
+              }
+            : null,
         });
       }
     } catch (socketError) {
