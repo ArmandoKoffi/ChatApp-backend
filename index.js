@@ -145,14 +145,20 @@ io.on("connection", (socket) => {
   });
 
   // Handle private message
-  socket.on("privateMessage", (data) => {
+  socket.on("privateMessage", async (data) => {
     const { senderId, receiverId, content, messageId, media, timestamp } = data;
     const receiverSocketId = onlineUsers.get(receiverId);
     const messageTimestamp = timestamp || new Date().toISOString();
     console.log(
       `Private message from ${senderId} to ${receiverId}: ${content}`
     );
-    if (receiverSocketId) {
+
+    // Vérifier si l'utilisateur est bloqué avant d'envoyer le message
+    const socketUtils = require("./utils/socket");
+    const isBlocked = await socketUtils.isUserBlockedBy(senderId, receiverId);
+    const isBlockedByReceiver = await socketUtils.isUserBlockedBy(receiverId, senderId);
+
+    if (!isBlocked && !isBlockedByReceiver && receiverSocketId) {
       io.to(receiverSocketId).emit("privateMessage", {
         senderId,
         content,
@@ -163,17 +169,34 @@ io.on("connection", (socket) => {
       console.log(
         `Message sent to ${receiverId} at socket ${receiverSocketId}`
       );
+    } else if (isBlocked) {
+      // Informer l'expéditeur qu'il a été bloqué
+      io.to(socket.id).emit("messageBlocked", {
+        receiverId,
+        reason: "blocked",
+      });
+      console.log(`Message blocked: ${senderId} is blocked by ${receiverId}`);
+    } else if (isBlockedByReceiver) {
+      // Informer l'expéditeur qu'il a bloqué le destinataire
+      io.to(socket.id).emit("messageBlocked", {
+        receiverId,
+        reason: "you_blocked_user",
+      });
+      console.log(`Message blocked: ${senderId} has blocked ${receiverId}`);
     } else {
       console.log(`Receiver ${receiverId} not found or not online`);
     }
-    // Also send back to sender for confirmation
-    io.to(socket.id).emit("privateMessageSent", {
-      receiverId,
-      content,
-      messageId,
-      media,
-      timestamp: messageTimestamp,
-    });
+
+    // Envoyer une confirmation à l'expéditeur si le message n'est pas bloqué
+    if (!isBlocked && !isBlockedByReceiver) {
+      io.to(socket.id).emit("privateMessageSent", {
+        receiverId,
+        content,
+        messageId,
+        media,
+        timestamp: messageTimestamp,
+      });
+    }
   });
 
   // Handle typing indicator

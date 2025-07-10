@@ -786,6 +786,18 @@ exports.blockUser = async (req, res) => {
 
     await user.save();
 
+    // Notifier l'utilisateur bloqué via Socket.IO
+    const socketUtils = require("../utils/socket");
+    socketUtils.notifyUserBlocked(userId.toString(), blockId);
+
+    // Émettre la liste mise à jour des utilisateurs en ligne
+    const io = socketUtils.getIo();
+    const onlineUserIds = await socketUtils.getFilteredOnlineUsers(userId);
+    const userSocketId = socketUtils.getOnlineUsers().get(userId.toString())?.socketId;
+    if (userSocketId) {
+      io.to(userSocketId).emit("onlineUsers", onlineUserIds);
+    }
+
     // Récupérer la liste des utilisateurs bloqués mise à jour
     const updatedUser = await User.findById(userId).populate(
       "blockedUsers",
@@ -830,6 +842,18 @@ exports.unblockUser = async (req, res) => {
     );
 
     await user.save();
+
+    // Notifier l'utilisateur débloqué via Socket.IO
+    const socketUtils = require("../utils/socket");
+    socketUtils.notifyUserUnblocked(userId.toString(), unblockId);
+
+    // Émettre la liste mise à jour des utilisateurs en ligne
+    const io = socketUtils.getIo();
+    const onlineUserIds = await socketUtils.getFilteredOnlineUsers(userId);
+    const userSocketId = socketUtils.getOnlineUsers().get(userId.toString())?.socketId;
+    if (userSocketId) {
+      io.to(userSocketId).emit("onlineUsers", onlineUserIds);
+    }
 
     // Récupérer la liste des utilisateurs bloqués mise à jour
     const updatedUser = await User.findById(userId).populate(
@@ -885,11 +909,11 @@ exports.getBlockedUsers = async (req, res) => {
 exports.getOnlineUsers = async (req, res) => {
   try {
     const socketUtils = require("../utils/socket");
-    const onlineUserIds = socketUtils.getOnlineUserIds();
+    const filteredOnlineUserIds = await socketUtils.getFilteredOnlineUsers(req.user._id);
 
     // Récupérer les informations des utilisateurs en ligne depuis la base de données
     const onlineUsers = await User.find({
-      _id: { $in: onlineUserIds, $ne: req.user._id },
+      _id: { $in: filteredOnlineUserIds },
     }).select(
       "_id username profilePicture isOnline lastActive profilePictureSecure"
     );
