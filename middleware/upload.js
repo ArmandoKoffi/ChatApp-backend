@@ -3,20 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-// Utiliser un stockage temporaire pour Multer
-const tempDir = os.tmpdir();
-
-// Configuration du stockage temporaire pour les fichiers avant upload sur Cloudinary
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, tempDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
-    const ext = path.extname(file.originalname);
-    cb(null, `temp-${uniqueSuffix}${ext}`);
-  }
-});
+// Utiliser le stockage en mémoire pour Multer
+const storage = multer.memoryStorage();
 
 // Filtre pour les types de fichiers
 const fileFilter = (req, file, cb) => {
@@ -90,13 +78,6 @@ const uploadRoom = multer({
   }
 });
 
-// Fonction pour nettoyer les fichiers temporaires
-const cleanupTempFile = (filePath) => {
-  if (filePath && fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-  }
-};
-
 // Middleware de gestion des erreurs de téléchargement
 const handleUploadError = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
@@ -125,6 +106,5 @@ module.exports = {
   uploadProfile: uploadProfile.single('profilePicture'),
   uploadMessage: uploadMessage.single('media'),
   uploadRoom: uploadRoom.single('avatar'),
-  handleUploadError,
-  cleanupTempFile
+  handleUploadError
 };

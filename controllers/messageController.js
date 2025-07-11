@@ -219,24 +219,26 @@ exports.sendPrivateMessage = async (req, res) => {
           mediaType: mediaType
         });
 
-        const uploadResult = await uploadToCloudinary(req.file.path, folder);
+        // Upload direct à Cloudinary sans passer par le stockage temporaire
+        // Upload direct du buffer en mémoire vers Cloudinary
+        const uploadResult = await uploadToCloudinary(req.file, folder);
         
         console.log('Cloudinary upload result:', uploadResult);
 
+        // Stocker les informations du média dans le message
         messageData.mediaUrl = uploadResult.url;
         messageData.mediaType = mediaType;
         messageData.mediaPublicId = uploadResult.public_id;
         messageData.mediaSize = req.file.size;
         messageData.mediaName = req.file.originalname;
-        
-        // Nettoyer le fichier temporaire
-        const { cleanupTempFile } = require('../middleware/upload');
-        await cleanupTempFile(req.file.path);
+        messageData.mediaContentType = req.file.mimetype;
 
         console.log('Media data added to message:', {
           mediaUrl: messageData.mediaUrl,
           mediaType: messageData.mediaType,
-          mediaPublicId: messageData.mediaPublicId
+          mediaPublicId: messageData.mediaPublicId,
+          mediaName: messageData.mediaName,
+          mediaSize: messageData.mediaSize
         });
       } catch (error) {
         console.error('Error uploading file to Cloudinary:', error);

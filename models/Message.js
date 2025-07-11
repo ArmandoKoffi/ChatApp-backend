@@ -35,6 +35,9 @@ const messageSchema = new mongoose.Schema({
   mediaName: {
     type: String
   },
+  mediaContentType: {
+    type: String
+  },
   isRead: {
     type: Boolean,
     default: false

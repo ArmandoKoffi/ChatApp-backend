@@ -52,11 +52,23 @@ const decryptUrl = (encryptedUrl) => {
  * @param {boolean} secure - Si true, l'URL sera chiffrée
  * @returns {Object} - Les informations du fichier téléchargé
  */
-const uploadToCloudinary = async (filePath, folder = 'profiles', secure = false) => {
+const uploadToCloudinary = async (file, folder = 'profiles', secure = false) => {
   try {
-    const result = await cloudinary.uploader.upload(filePath, {
-      folder: folder,
-      resource_type: 'auto'
+    // Créer un stream à partir du buffer en mémoire
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: folder,
+          resource_type: 'auto'
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      
+      // Écrire le buffer dans le stream
+      stream.end(file.buffer);
     });
 
     // Si sécurisé, chiffrer l'URL
