@@ -3,6 +3,160 @@ const User = require("../models/User");
 const ChatRoom = require("../models/ChatRoom");
 const fs = require("fs");
 const path = require("path");
+const socketUtils = require("../utils/socket");
+
+// @desc    Supprimer un message
+// @route   DELETE /api/messages/:messageId
+// @access  Private
+exports.deleteMessage = async (req, res) => {
+  try {
+    const messageId = req.params.messageId;
+    const userId = req.user._id;
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        message: "Message non trouvé"
+      });
+    }
+
+    // Vérifier que l'utilisateur est l'expéditeur du message
+    if (message.sender.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Vous n'êtes pas autorisé à supprimer ce message"
+      });
+    }
+
+    // Supprimer le fichier média associé si présent
+    if (message.mediaUrl) {
+      const mediaPath = path.join(__dirname, '..', 'uploads', 'messages', message.mediaUrl);
+      if (fs.existsSync(mediaPath)) {
+        fs.unlinkSync(mediaPath);
+      }
+    }
+
+    await message.deleteOne();
+
+    // Notifier les utilisateurs via Socket.IO
+    const io = socketUtils.getIo();
+    const onlineUsers = socketUtils.getOnlineUsers();
+
+    // Notifier le destinataire
+    if (message.receiver) {
+      const receiverSocketId = onlineUsers.get(message.receiver.toString());
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit('messageDeleted', { messageId });
+      }
+    } else if (message.chatRoom) {
+      // Notifier tous les membres du groupe
+      const chatRoom = await ChatRoom.findById(message.chatRoom);
+      if (chatRoom) {
+        chatRoom.members.forEach(memberId => {
+          const memberSocketId = onlineUsers.get(memberId.toString());
+          if (memberSocketId) {
+            io.to(memberSocketId).emit('messageDeleted', { messageId });
+          }
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Message supprimé avec succès"
+    });
+  } catch (error) {
+    console.error("Erreur lors de la suppression du message:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erreur lors de la suppression du message"
+    });
+  }
+};
+
+// @desc    Marquer/Démarquer un message comme favori
+// @route   POST /api/messages/:messageId/favorite
+// @access  Private
+exports.toggleFavorite = async (req, res) => {
+  try {
+    const messageId = req.params.messageId;
+    const userId = req.user._id;
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        message: "Message non trouvé"
+      });
+    }
+
+    // Vérifier que l'utilisateur a accès au message
+    const canAccess = message.sender.toString() === userId.toString() ||
+                     message.receiver?.toString() === userId.toString() ||
+                     (message.chatRoom && await ChatRoom.exists({ _id: message.chatRoom, members: userId }));
+
+    if (!canAccess) {
+      return res.status(403).json({
+        success: false,
+        message: "Vous n'avez pas accès à ce message"
+      });
+    }
+
+    await message.toggleFavorite(userId);
+
+    // Notifier l'utilisateur via Socket.IO
+    const io = socketUtils.getIo();
+    const onlineUsers = socketUtils.getOnlineUsers();
+    const userSocketId = onlineUsers.get(userId.toString());
+    
+    if (userSocketId) {
+      io.to(userSocketId).emit('messageFavoriteUpdated', {
+        messageId,
+        isFavorite: message.isFavorite
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: message
+    });
+  } catch (error) {
+    console.error("Erreur lors de la modification du statut favori:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erreur lors de la modification du statut favori"
+    });
+  }
+};
+
+// @desc    Récupérer les messages favoris d'un utilisateur
+// @route   GET /api/messages/favorites
+// @access  Private
+exports.getFavoriteMessages = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const favoriteMessages = await Message.find({
+      favoritedBy: userId
+    })
+    .populate('sender', 'username profilePicture')
+    .populate('receiver', 'username profilePicture')
+    .populate('chatRoom', 'name')
+    .sort('-createdAt');
+
+    res.status(200).json({
+      success: true,
+      data: favoriteMessages
+    });
+  } catch (error) {
+    console.error("Erreur lors de la récupération des messages favoris:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erreur lors de la récupération des messages favoris"
+    });
+  }
+};
 
 // @desc    Envoyer un message privé à un utilisateur
 // @route   POST /api/messages/private/:receiverId

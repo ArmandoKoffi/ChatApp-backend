@@ -41,4 +41,8 @@ router.get('/last-messages', protect, getLastMessages);
 // Route pour récupérer les données partagées (médias) d'une conversation privée
 router.get('/shared/:userId', protect, getSharedData);
 
+// Routes pour la gestion des favoris
+router.post('/:messageId/favorite', protect, toggleFavorite);
+router.get('/favorites', protect, getFavoriteMessages);
+
 module.exports = router;

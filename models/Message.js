@@ -68,8 +68,32 @@ const messageSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  isFavorite: {
+    type: Boolean,
+    default: false
+  },
+  favoritedBy: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }]
 }, { timestamps: true });
+
+// Méthode pour marquer/démarquer un message comme favori
+messageSchema.methods.toggleFavorite = async function(userId) {
+  const userIndex = this.favoritedBy.indexOf(userId);
+  
+  if (userIndex === -1) {
+    this.favoritedBy.push(userId);
+    this.isFavorite = true;
+  } else {
+    this.favoritedBy.splice(userIndex, 1);
+    this.isFavorite = this.favoritedBy.length > 0;
+  }
+  
+  await this.save();
+  return this;
+};
 
 // Méthode pour marquer un message comme lu par un utilisateur
 messageSchema.methods.markAsRead = async function(userId) {
