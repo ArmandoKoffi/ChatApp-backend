@@ -208,21 +208,40 @@ exports.sendPrivateMessage = async (req, res) => {
 
     // Ajouter le média si présent
     if (req.file) {
-      const { uploadToCloudinary } = require('../utils/cloudinary');
-      const mediaType = req.file.mimetype.split("/")[0];
-      const folder = `messages/${mediaType}s`; // Par exemple: messages/images, messages/videos, etc.
-      
-      const uploadResult = await uploadToCloudinary(req.file.path, folder);
-      
-      messageData.mediaUrl = uploadResult.url;
-      messageData.mediaType = mediaType;
-      messageData.mediaPublicId = uploadResult.public_id;
-      messageData.mediaSize = req.file.size;
-      messageData.mediaName = req.file.originalname;
-      
-      // Nettoyer le fichier temporaire
-      const { cleanupTempFile } = require('../middleware/upload');
-      cleanupTempFile(req.file.path);
+      try {
+        const { uploadToCloudinary } = require('../utils/cloudinary');
+        const mediaType = req.file.mimetype.split("/")[0];
+        const folder = `messages/${mediaType}s`; // Par exemple: messages/images, messages/videos, etc.
+        
+        console.log('Uploading file to Cloudinary:', {
+          path: req.file.path,
+          folder: folder,
+          mediaType: mediaType
+        });
+
+        const uploadResult = await uploadToCloudinary(req.file.path, folder);
+        
+        console.log('Cloudinary upload result:', uploadResult);
+
+        messageData.mediaUrl = uploadResult.url;
+        messageData.mediaType = mediaType;
+        messageData.mediaPublicId = uploadResult.public_id;
+        messageData.mediaSize = req.file.size;
+        messageData.mediaName = req.file.originalname;
+        
+        // Nettoyer le fichier temporaire
+        const { cleanupTempFile } = require('../middleware/upload');
+        await cleanupTempFile(req.file.path);
+
+        console.log('Media data added to message:', {
+          mediaUrl: messageData.mediaUrl,
+          mediaType: messageData.mediaType,
+          mediaPublicId: messageData.mediaPublicId
+        });
+      } catch (error) {
+        console.error('Error uploading file to Cloudinary:', error);
+        throw error;
+      }
     }
 
     const message = await Message.create(messageData);
@@ -263,7 +282,10 @@ exports.sendPrivateMessage = async (req, res) => {
           timestamp: message.createdAt.toISOString(),
           media: message.mediaUrl ? {
             url: message.mediaUrl,
-            type: message.mediaType
+            type: message.mediaType,
+            name: message.mediaName,
+            size: message.mediaSize,
+            publicId: message.mediaPublicId
           } : null,
         });
       }
