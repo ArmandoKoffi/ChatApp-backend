@@ -13,7 +13,9 @@ const {
   markConversationAsRead,
   markAsPlayed,
   getLastMessages,
-  getSharedData
+  getSharedData,
+  toggleFavorite,
+  getFavoriteMessages
 } = require('../controllers/messageController');
 const { protect } = require('../middleware/auth');
 const { uploadMessage, handleUploadError } = require('../middleware/upload');
