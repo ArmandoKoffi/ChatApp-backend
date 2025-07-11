@@ -29,12 +29,10 @@ exports.deleteMessage = async (req, res) => {
       });
     }
 
-    // Supprimer le fichier média associé si présent
-    if (message.mediaUrl) {
-      const mediaPath = path.join(__dirname, '..', 'uploads', 'messages', message.mediaUrl);
-      if (fs.existsSync(mediaPath)) {
-        fs.unlinkSync(mediaPath);
-      }
+    // Supprimer le fichier média de Cloudinary si présent
+    if (message.mediaPublicId) {
+      const { removeFromCloudinary } = require('../utils/cloudinary');
+      await removeFromCloudinary(message.mediaPublicId);
     }
 
     await message.deleteOne();
@@ -210,10 +208,21 @@ exports.sendPrivateMessage = async (req, res) => {
 
     // Ajouter le média si présent
     if (req.file) {
-      messageData.media = {
-        url: req.file.filename,
-        type: req.file.mimetype.split("/")[0], // 'image', 'video', 'audio', etc.
-      };
+      const { uploadToCloudinary } = require('../utils/cloudinary');
+      const mediaType = req.file.mimetype.split("/")[0];
+      const folder = `messages/${mediaType}s`; // Par exemple: messages/images, messages/videos, etc.
+      
+      const uploadResult = await uploadToCloudinary(req.file.path, folder);
+      
+      messageData.mediaUrl = uploadResult.url;
+      messageData.mediaType = mediaType;
+      messageData.mediaPublicId = uploadResult.public_id;
+      messageData.mediaSize = req.file.size;
+      messageData.mediaName = req.file.originalname;
+      
+      // Nettoyer le fichier temporaire
+      const { cleanupTempFile } = require('../middleware/upload');
+      cleanupTempFile(req.file.path);
     }
 
     const message = await Message.create(messageData);
@@ -252,12 +261,10 @@ exports.sendPrivateMessage = async (req, res) => {
           content: content || "",
           messageId: message._id,
           timestamp: message.createdAt.toISOString(),
-          media: req.file
-            ? {
-                url: `/uploads/messages/${req.file.filename}`,
-                type: req.file.mimetype.split("/")[0],
-              }
-            : null,
+          media: message.mediaUrl ? {
+            url: message.mediaUrl,
+            type: message.mediaType
+          } : null,
         });
       }
 
@@ -265,7 +272,7 @@ exports.sendPrivateMessage = async (req, res) => {
       if (senderSocketId) {
         io.to(senderSocketId).emit("messageListUpdate", {
           senderId: receiverId.toString(), // L'ID de la conversation (destinataire)
-          lastMessage: content || (req.file ? `${req.file.mimetype.split("/")[0]} envoyé` : ""),
+          lastMessage: content || (message.mediaType ? `${message.mediaType} envoyé` : ""),
           timestamp: message.createdAt.toISOString(),
           isUnread: false, // L'expéditeur a déjà "lu" son propre message
         });
@@ -275,12 +282,10 @@ exports.sendPrivateMessage = async (req, res) => {
           content: content || "",
           messageId: message._id,
           timestamp: message.createdAt.toISOString(),
-          media: req.file
-            ? {
-                url: `/uploads/messages/${req.file.filename}`,
-                type: req.file.mimetype.split("/")[0],
-              }
-            : null,
+          media: message.mediaUrl ? {
+            url: message.mediaUrl,
+            type: message.mediaType
+          } : null,
         });
       }
     } catch (socketError) {
