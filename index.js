@@ -16,6 +16,7 @@ const chatRoomRoutes = require("./routes/chatRoomRoutes");
 const mediaRoutes = require("./routes/mediaRoutes");
 
 const app = express();
+const User = require("./models/User");
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
@@ -121,7 +122,6 @@ io.on("connection", (socket) => {
   socket.on("join", async (userId) => {
     try {
       // Récupérer les informations de l'utilisateur depuis la base de données
-      const User = require("./models/User");
       const user = await User.findById(userId).select(
         "username profilePicture isOnline profilePictureSecure"
       );
@@ -141,7 +141,6 @@ io.on("connection", (socket) => {
 
         // Émettre la liste complète des utilisateurs en ligne (id, username, profilePicture)
         const allOnlineUserIds = socketUtils.getOnlineUserIds();
-        const User = require("./models/User");
         const onlineUsersData = await User.find({
           _id: { $in: allOnlineUserIds },
         })
@@ -343,7 +342,6 @@ io.on("connection", (socket) => {
   socket.on("logout", async (userId) => {
     try {
       // Mettre à jour le statut hors ligne dans la base de données
-      const User = require("./models/User");
       const user = await User.findById(userId);
       if (user) {
         user.isOnline = false;
@@ -355,7 +353,6 @@ io.on("connection", (socket) => {
       socketUtils.removeOnlineUser(userId);
       // Émettre la liste complète des utilisateurs en ligne (id, username, profilePicture)
       const allOnlineUserIds = socketUtils.getOnlineUserIds();
-      const User = require("./models/User");
       const onlineUsersData = await User.find({
         _id: { $in: allOnlineUserIds },
       })
@@ -376,7 +373,6 @@ io.on("connection", (socket) => {
       for (const [userId, userInfo] of onlineUsers.entries()) {
         if (userInfo.socketId === socket.id) {
           // Mettre à jour le statut hors ligne dans la base de données
-          const User = require("./models/User");
           const user = await User.findById(userId);
           if (user) {
             user.isOnline = false;
@@ -388,7 +384,6 @@ io.on("connection", (socket) => {
           socketUtils.removeOnlineUser(userId);
           // Émettre la liste complète des utilisateurs en ligne (id, username, profilePicture)
           const allOnlineUserIds = socketUtils.getOnlineUserIds();
-          const User = require("./models/User");
           const onlineUsersData = await User.find({
             _id: { $in: allOnlineUserIds },
           })
