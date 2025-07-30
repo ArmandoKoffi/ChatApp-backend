@@ -24,6 +24,8 @@ const io = socketIo(server, {
     credentials: true,
   },
 });
+// Rendre io accessible dans les controllers
+app.set("io", io);
 
 // Middleware
 app.use(
@@ -78,6 +80,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/chatrooms", chatRoomRoutes);
 app.use("/api/media", mediaRoutes);
+const bookmarkRoutes = require("./routes/bookmarkRoutes");
+app.use("/api/bookmarks", bookmarkRoutes);
 
 // Route de base
 app.get("/", (req, res) => {
@@ -135,8 +139,15 @@ io.on("connection", (socket) => {
           isOnline: true,
         });
 
-        // Émettre la liste mise à jour des utilisateurs en ligne
-        io.emit("onlineUsers", socketUtils.getOnlineUserIds());
+        // Émettre la liste complète des utilisateurs en ligne (id, username, profilePicture)
+        const allOnlineUserIds = socketUtils.getOnlineUserIds();
+        const User = require("./models/User");
+        const onlineUsersData = await User.find({
+          _id: { $in: allOnlineUserIds },
+        })
+          .select("_id username profilePicture isOnline")
+          .lean();
+        io.emit("onlineUsers", onlineUsersData);
         console.log("User joined:", userId, user.username);
       }
     } catch (error) {
@@ -156,7 +167,10 @@ io.on("connection", (socket) => {
     // Vérifier si l'utilisateur est bloqué avant d'envoyer le message
     const socketUtils = require("./utils/socket");
     const isBlocked = await socketUtils.isUserBlockedBy(senderId, receiverId);
-    const isBlockedByReceiver = await socketUtils.isUserBlockedBy(receiverId, senderId);
+    const isBlockedByReceiver = await socketUtils.isUserBlockedBy(
+      receiverId,
+      senderId
+    );
 
     if (!isBlocked && !isBlockedByReceiver && receiverSocketId) {
       io.to(receiverSocketId).emit("privateMessage", {
@@ -339,7 +353,15 @@ io.on("connection", (socket) => {
 
       // Supprimer l'utilisateur de la liste des utilisateurs en ligne
       socketUtils.removeOnlineUser(userId);
-      io.emit("onlineUsers", socketUtils.getOnlineUserIds());
+      // Émettre la liste complète des utilisateurs en ligne (id, username, profilePicture)
+      const allOnlineUserIds = socketUtils.getOnlineUserIds();
+      const User = require("./models/User");
+      const onlineUsersData = await User.find({
+        _id: { $in: allOnlineUserIds },
+      })
+        .select("_id username profilePicture isOnline")
+        .lean();
+      io.emit("onlineUsers", onlineUsersData);
       console.log("User logged out:", userId);
     } catch (error) {
       console.error("Erreur lors de la déconnexion de l'utilisateur:", error);
@@ -364,7 +386,15 @@ io.on("connection", (socket) => {
 
           // Supprimer l'utilisateur de la liste des utilisateurs en ligne
           socketUtils.removeOnlineUser(userId);
-          io.emit("onlineUsers", socketUtils.getOnlineUserIds());
+          // Émettre la liste complète des utilisateurs en ligne (id, username, profilePicture)
+          const allOnlineUserIds = socketUtils.getOnlineUserIds();
+          const User = require("./models/User");
+          const onlineUsersData = await User.find({
+            _id: { $in: allOnlineUserIds },
+          })
+            .select("_id username profilePicture isOnline")
+            .lean();
+          io.emit("onlineUsers", onlineUsersData);
           console.log("User disconnected:", userId);
           break;
         }

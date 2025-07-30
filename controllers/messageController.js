@@ -17,7 +17,7 @@ exports.deleteMessage = async (req, res) => {
     if (!message) {
       return res.status(404).json({
         success: false,
-        message: "Message non trouvé"
+        message: "Message non trouvé",
       });
     }
 
@@ -25,13 +25,13 @@ exports.deleteMessage = async (req, res) => {
     if (message.sender.toString() !== userId.toString()) {
       return res.status(403).json({
         success: false,
-        message: "Vous n'êtes pas autorisé à supprimer ce message"
+        message: "Vous n'êtes pas autorisé à supprimer ce message",
       });
     }
 
     // Supprimer le fichier média de Cloudinary si présent
     if (message.mediaPublicId) {
-      const { removeFromCloudinary } = require('../utils/cloudinary');
+      const { removeFromCloudinary } = require("../utils/cloudinary");
       await removeFromCloudinary(message.mediaPublicId);
     }
 
@@ -45,16 +45,16 @@ exports.deleteMessage = async (req, res) => {
     if (message.receiver) {
       const receiverSocketId = onlineUsers.get(message.receiver.toString());
       if (receiverSocketId) {
-        io.to(receiverSocketId).emit('messageDeleted', { messageId });
+        io.to(receiverSocketId).emit("messageDeleted", { messageId });
       }
     } else if (message.chatRoom) {
       // Notifier tous les membres du groupe
       const chatRoom = await ChatRoom.findById(message.chatRoom);
       if (chatRoom) {
-        chatRoom.members.forEach(memberId => {
+        chatRoom.members.forEach((memberId) => {
           const memberSocketId = onlineUsers.get(memberId.toString());
           if (memberSocketId) {
-            io.to(memberSocketId).emit('messageDeleted', { messageId });
+            io.to(memberSocketId).emit("messageDeleted", { messageId });
           }
         });
       }
@@ -62,13 +62,13 @@ exports.deleteMessage = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Message supprimé avec succès"
+      message: "Message supprimé avec succès",
     });
   } catch (error) {
     console.error("Erreur lors de la suppression du message:", error);
     res.status(500).json({
       success: false,
-      message: "Erreur lors de la suppression du message"
+      message: "Erreur lors de la suppression du message",
     });
   }
 };
@@ -85,19 +85,21 @@ exports.toggleFavorite = async (req, res) => {
     if (!message) {
       return res.status(404).json({
         success: false,
-        message: "Message non trouvé"
+        message: "Message non trouvé",
       });
     }
 
     // Vérifier que l'utilisateur a accès au message
-    const canAccess = message.sender.toString() === userId.toString() ||
-                     message.receiver?.toString() === userId.toString() ||
-                     (message.chatRoom && await ChatRoom.exists({ _id: message.chatRoom, members: userId }));
+    const canAccess =
+      message.sender.toString() === userId.toString() ||
+      message.receiver?.toString() === userId.toString() ||
+      (message.chatRoom &&
+        (await ChatRoom.exists({ _id: message.chatRoom, members: userId })));
 
     if (!canAccess) {
       return res.status(403).json({
         success: false,
-        message: "Vous n'avez pas accès à ce message"
+        message: "Vous n'avez pas accès à ce message",
       });
     }
 
@@ -107,23 +109,23 @@ exports.toggleFavorite = async (req, res) => {
     const io = socketUtils.getIo();
     const onlineUsers = socketUtils.getOnlineUsers();
     const userSocketId = onlineUsers.get(userId.toString());
-    
+
     if (userSocketId) {
-      io.to(userSocketId).emit('messageFavoriteUpdated', {
+      io.to(userSocketId).emit("messageFavoriteUpdated", {
         messageId,
-        isFavorite: message.isFavorite
+        isFavorite: message.isFavorite,
       });
     }
 
     res.status(200).json({
       success: true,
-      data: message
+      data: message,
     });
   } catch (error) {
     console.error("Erreur lors de la modification du statut favori:", error);
     res.status(500).json({
       success: false,
-      message: "Erreur lors de la modification du statut favori"
+      message: "Erreur lors de la modification du statut favori",
     });
   }
 };
@@ -136,22 +138,25 @@ exports.getFavoriteMessages = async (req, res) => {
     const userId = req.user._id;
 
     const favoriteMessages = await Message.find({
-      favoritedBy: userId
+      favoritedBy: userId,
     })
-    .populate('sender', 'username profilePicture')
-    .populate('receiver', 'username profilePicture')
-    .populate('chatRoom', 'name')
-    .sort('-createdAt');
+      .populate("sender", "username profilePicture")
+      .populate("receiver", "username profilePicture")
+      .populate("chatRoom", "name")
+      .sort("-createdAt");
 
     res.status(200).json({
       success: true,
-      data: favoriteMessages
+      data: favoriteMessages,
     });
   } catch (error) {
-    console.error("Erreur lors de la récupération des messages favoris:", error);
+    console.error(
+      "Erreur lors de la récupération des messages favoris:",
+      error
+    );
     res.status(500).json({
       success: false,
-      message: "Erreur lors de la récupération des messages favoris"
+      message: "Erreur lors de la récupération des messages favoris",
     });
   }
 };
@@ -209,21 +214,22 @@ exports.sendPrivateMessage = async (req, res) => {
     // Ajouter le média si présent
     if (req.file) {
       try {
-        const { uploadToCloudinary } = require('../utils/cloudinary');
+        const { uploadToCloudinary } = require("../utils/cloudinary");
         const mediaType = req.file.mimetype.split("/")[0];
         const folder = `messages/${mediaType}s`; // Par exemple: messages/images, messages/videos, etc.
-        
-        console.log('Uploading file to Cloudinary:', {
-          path: req.file.path,
+
+        console.log("Uploading file to Cloudinary:", {
+          originalname: req.file.originalname,
           folder: folder,
-          mediaType: mediaType
+          mediaType: mediaType,
+          size: req.file.size,
         });
 
         // Upload direct à Cloudinary sans passer par le stockage temporaire
         // Upload direct du buffer en mémoire vers Cloudinary
         const uploadResult = await uploadToCloudinary(req.file, folder);
-        
-        console.log('Cloudinary upload result:', uploadResult);
+
+        console.log("Cloudinary upload result:", uploadResult);
 
         // Stocker les informations du média dans le message
         messageData.mediaUrl = uploadResult.url;
@@ -233,15 +239,15 @@ exports.sendPrivateMessage = async (req, res) => {
         messageData.mediaName = req.file.originalname;
         messageData.mediaContentType = req.file.mimetype;
 
-        console.log('Media data added to message:', {
+        console.log("Media data added to message:", {
           mediaUrl: messageData.mediaUrl,
           mediaType: messageData.mediaType,
           mediaPublicId: messageData.mediaPublicId,
           mediaName: messageData.mediaName,
-          mediaSize: messageData.mediaSize
+          mediaSize: messageData.mediaSize,
         });
       } catch (error) {
-        console.error('Error uploading file to Cloudinary:', error);
+        console.error("Error uploading file to Cloudinary:", error);
         throw error;
       }
     }
@@ -282,13 +288,15 @@ exports.sendPrivateMessage = async (req, res) => {
           content: content || "",
           messageId: message._id,
           timestamp: message.createdAt.toISOString(),
-          media: message.mediaUrl ? {
-            url: message.mediaUrl,
-            type: message.mediaType,
-            name: message.mediaName,
-            size: message.mediaSize,
-            publicId: message.mediaPublicId
-          } : null,
+          media: message.mediaUrl
+            ? {
+                url: message.mediaUrl,
+                type: message.mediaType,
+                name: message.mediaName,
+                size: message.mediaSize,
+                publicId: message.mediaPublicId,
+              }
+            : null,
         });
       }
 
@@ -296,7 +304,8 @@ exports.sendPrivateMessage = async (req, res) => {
       if (senderSocketId) {
         io.to(senderSocketId).emit("messageListUpdate", {
           senderId: receiverId.toString(), // L'ID de la conversation (destinataire)
-          lastMessage: content || (message.mediaType ? `${message.mediaType} envoyé` : ""),
+          lastMessage:
+            content || (message.mediaType ? `${message.mediaType} envoyé` : ""),
           timestamp: message.createdAt.toISOString(),
           isUnread: false, // L'expéditeur a déjà "lu" son propre message
         });
@@ -306,10 +315,12 @@ exports.sendPrivateMessage = async (req, res) => {
           content: content || "",
           messageId: message._id,
           timestamp: message.createdAt.toISOString(),
-          media: message.mediaUrl ? {
-            url: message.mediaUrl,
-            type: message.mediaType
-          } : null,
+          media: message.mediaUrl
+            ? {
+                url: message.mediaUrl,
+                type: message.mediaType,
+              }
+            : null,
         });
       }
     } catch (socketError) {
@@ -375,10 +386,27 @@ exports.sendRoomMessage = async (req, res) => {
 
     // Ajouter le média si présent
     if (req.file) {
-      messageData.media = {
-        url: req.file.filename,
-        type: req.file.mimetype.split("/")[0], // 'image', 'video', 'audio', etc.
-      };
+      try {
+        const cloudinary = require("../config/cloudinary");
+        const mediaType = req.file.mimetype.split("/")[0];
+
+        // Upload vers Cloudinary
+        const uploadResult = await cloudinary.uploadToCloudinary(
+          req.file.buffer,
+          req.file.originalname,
+          "room-messages"
+        );
+
+        messageData.mediaUrl = uploadResult.secure_url;
+        messageData.mediaType = mediaType;
+        messageData.mediaPublicId = uploadResult.public_id;
+        messageData.mediaSize = req.file.size;
+        messageData.mediaName = req.file.originalname;
+        messageData.mediaContentType = req.file.mimetype;
+      } catch (error) {
+        console.error("Error uploading file to Cloudinary:", error);
+        throw error;
+      }
     }
 
     const message = await Message.create(messageData);
@@ -740,16 +768,19 @@ exports.markAsRead = async (req, res) => {
       const io = socketUtils.getIo();
       const onlineUsers = socketUtils.getOnlineUsers();
       const senderSocketId = onlineUsers.get(message.sender.toString());
-      
+
       if (senderSocketId) {
         io.to(senderSocketId).emit("messageRead", {
           conversationId: message.receiver.toString(),
           userId: message.receiver.toString(),
-          messageId: messageId
+          messageId: messageId,
         });
       }
     } catch (socketError) {
-      console.error("Erreur lors de l'émission de l'événement messageRead:", socketError);
+      console.error(
+        "Erreur lors de l'émission de l'événement messageRead:",
+        socketError
+      );
     }
 
     res.status(200).json({
@@ -788,16 +819,21 @@ exports.markConversationAsRead = async (req, res) => {
       const socketUtils = require("../utils/socket");
       const io = socketUtils.getIo();
       const onlineUsers = socketUtils.getOnlineUsers();
-      const senderSocketId = onlineUsers.get((targetUserId || conversationId).toString());
-      
+      const senderSocketId = onlineUsers.get(
+        (targetUserId || conversationId).toString()
+      );
+
       if (senderSocketId) {
         io.to(senderSocketId).emit("messageRead", {
           conversationId: currentUserId.toString(),
-          userId: currentUserId.toString()
+          userId: currentUserId.toString(),
         });
       }
     } catch (socketError) {
-      console.error("Erreur lors de l'émission de l'événement messageRead:", socketError);
+      console.error(
+        "Erreur lors de l'émission de l'événement messageRead:",
+        socketError
+      );
     }
 
     res.status(200).json({
@@ -921,13 +957,31 @@ exports.sendPrivateVoiceMessage = async (req, res) => {
       });
     }
 
-    // Créer le message
+    // Upload du fichier audio sur Cloudinary
+    const { uploadToCloudinary } = require("../utils/cloudinary");
+    const folder = "messages/audios";
+    let uploadResult;
+    try {
+      uploadResult = await uploadToCloudinary(req.file, folder);
+    } catch (error) {
+      console.error("Erreur lors de l'upload du vocal sur Cloudinary:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Erreur lors de l'upload du message vocal sur Cloudinary",
+      });
+    }
+
+    // Créer le message avec l'URL Cloudinary
     const messageData = {
       sender: senderId,
       receiver: receiverId,
       content: "Message vocal",
-      mediaUrl: req.file.filename,
+      mediaUrl: uploadResult.url,
       mediaType: "audio",
+      mediaPublicId: uploadResult.public_id,
+      mediaSize: req.file.size,
+      mediaName: req.file.originalname,
+      mediaContentType: req.file.mimetype,
     };
 
     const message = await Message.create(messageData);
@@ -949,7 +1003,7 @@ exports.sendPrivateVoiceMessage = async (req, res) => {
           content: "Message vocal",
           messageId: message._id,
           media: {
-            url: `/uploads/messages/${req.file.filename}`,
+            url: uploadResult.url,
             type: "audio",
           },
           timestamp: message.createdAt.toISOString(),
@@ -966,7 +1020,7 @@ exports.sendPrivateVoiceMessage = async (req, res) => {
       success: true,
       message: {
         id: message._id,
-        audioUrl: `/uploads/messages/${req.file.filename}`,
+        audioUrl: uploadResult.url,
       },
     });
   } catch (error) {
@@ -1029,35 +1083,32 @@ exports.uploadMediaMessage = async (req, res) => {
       mediaType = "document";
     }
 
-    // Déplacer le fichier temporaire vers un emplacement permanent
-    const tempPath = req.file.path;
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    const ext = path.extname(req.file.originalname);
-    const permanentFilename = `${uniqueSuffix}${ext}`;
-    const permanentPath = path.join(
-      __dirname,
-      "../uploads/messages",
-      permanentFilename
-    );
-
-    // Créer le dossier uploads/messages s'il n'existe pas
-    const messagesDir = path.dirname(permanentPath);
-    if (!fs.existsSync(messagesDir)) {
-      fs.mkdirSync(messagesDir, { recursive: true });
+    // Upload vers Cloudinary
+    const { uploadToCloudinary } = require("../utils/cloudinary");
+    const folder = `messages/${mediaType}s`;
+    let uploadResult;
+    try {
+      uploadResult = await uploadToCloudinary(req.file, folder);
+    } catch (error) {
+      console.error("Erreur lors de l'upload du média sur Cloudinary:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Erreur lors de l'upload du média sur Cloudinary",
+      });
     }
 
-    // Déplacer le fichier (utiliser copyFileSync et unlinkSync pour gérer les opérations cross-device)
-    fs.copyFileSync(tempPath, permanentPath);
-    fs.unlinkSync(tempPath);
-
-    // Créer le message avec le nom de fichier permanent
+    // Créer le message avec les données Cloudinary
     const messageData = {
       sender: senderId,
       receiver: receiverId,
       content:
         mediaType.charAt(0).toUpperCase() + mediaType.slice(1) + " envoyé",
-      mediaUrl: permanentFilename,
+      mediaUrl: uploadResult.url,
       mediaType: mediaType,
+      mediaPublicId: uploadResult.public_id,
+      mediaSize: req.file.size,
+      mediaName: req.file.originalname,
+      mediaContentType: req.file.mimetype,
     };
 
     const message = await Message.create(messageData);
@@ -1080,7 +1131,7 @@ exports.uploadMediaMessage = async (req, res) => {
             mediaType.charAt(0).toUpperCase() + mediaType.slice(1) + " envoyé",
           messageId: message._id,
           media: {
-            url: `https://chatapp-shi2.onrender.com/uploads/messages/${permanentFilename}`,
+            url: uploadResult.url,
             type: mediaType,
           },
           timestamp: message.createdAt.toISOString(),
@@ -1097,7 +1148,7 @@ exports.uploadMediaMessage = async (req, res) => {
       success: true,
       message: {
         id: message._id,
-        fileUrl: `https://chatapp-shi2.onrender.com/uploads/messages/${permanentFilename}`,
+        fileUrl: uploadResult.secure_url,
       },
     });
   } catch (error) {
